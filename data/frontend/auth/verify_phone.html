@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d18">
+    <title>Verify Phone · FinPulse AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+</head>
+<body>
+    <main class="auth-card">
+        <p class="auth-brand">FinPulse <span>AI</span></p>
+        <p class="auth-eyebrow">PHONE VERIFICATION</p>
+        <h1>Check your phone</h1>
+        <p class="auth-description">
+            Enter the SMS code sent to {{ phone }} to finish creating your account.
+        </p>
+        {% if error %}
+        <p class="auth-error" role="alert">{{ error }}</p>
+        {% endif %}
+        <form class="auth-form" method="post" action="{{ url_for('verify_phone') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="code">Verification code
+                <input id="code" name="code" type="text" inputmode="numeric"
+                       autocomplete="one-time-code" pattern="[0-9]{4,10}"
+                       maxlength="10" required autofocus>
+            </label>
+            <button type="submit">Verify phone and create account</button>
+        </form>
+        <p class="auth-footer">
+            Need to change your details? <a href="{{ url_for('signup') }}">Start again</a>
+        </p>
+    </main>
+</body>
+</html>

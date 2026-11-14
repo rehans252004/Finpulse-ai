@@ -1,0 +1,307 @@
+:root {
+    color-scheme: dark;
+    --auth-background: #080d18;
+    --auth-surface: #111a2b;
+    --auth-border: #26344b;
+    --auth-text: #edf3ff;
+    --auth-muted: #91a1bb;
+    --auth-accent: #38d9c4;
+    --auth-danger: #ffaaaa;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    display: grid;
+    min-height: 100vh;
+    margin: 0;
+    padding: 24px;
+    place-items: center;
+    background:
+        radial-gradient(ellipse at 75% 8%, rgba(56, 217, 196, 0.16), transparent 36%),
+        radial-gradient(ellipse at 12% 92%, rgba(119, 152, 255, 0.12), transparent 38%),
+        var(--auth-background);
+    color: var(--auth-text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.auth-card {
+    width: min(100%, 430px);
+    padding: clamp(24px, 6vw, 40px);
+    background: var(--auth-surface);
+    border: 1px solid var(--auth-border);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+}
+
+.auth-brand {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+}
+
+.auth-brand span,
+.auth-accent {
+    color: var(--auth-accent);
+}
+
+.auth-eyebrow {
+    margin: 0 0 28px;
+    color: var(--auth-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 25px;
+}
+
+.auth-description,
+.auth-footer,
+.auth-message {
+    color: var(--auth-muted);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.auth-form {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0 18px;
+}
+
+.auth-form label {
+    display: grid;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.auth-form input {
+    width: 100%;
+    min-height: 45px;
+    padding: 10px 12px;
+    border: 1px solid var(--auth-border);
+    border-radius: 9px;
+    background: #0a1220;
+    color: var(--auth-text);
+    font: inherit;
+}
+
+.auth-form input:focus-visible,
+.auth-form button:focus-visible,
+.auth-skip:focus-visible {
+    outline: 2px solid var(--auth-accent);
+    outline-offset: 3px;
+}
+
+.auth-form button {
+    min-height: 45px;
+    margin-top: 4px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--auth-accent);
+    color: #07151a;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.auth-form button:hover {
+    filter: brightness(1.08);
+}
+
+.auth-error {
+    margin: 16px 0;
+    padding: 11px 13px;
+    border: 1px solid rgba(255, 119, 119, 0.38);
+    border-radius: 9px;
+    background: rgba(255, 119, 119, 0.1);
+    color: var(--auth-danger);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.auth-success {
+    border-color: rgba(56, 217, 196, 0.35);
+    background: rgba(56, 217, 196, 0.08);
+    color: var(--auth-accent);
+}
+
+.auth-warning {
+    padding: 11px 13px;
+    border: 1px solid rgba(245, 199, 107, 0.35);
+    border-radius: 9px;
+    background: rgba(245, 199, 107, 0.08);
+    color: #f5d894;
+}
+
+.auth-info {
+    padding: 11px 13px;
+    border: 1px solid rgba(119, 152, 255, 0.35);
+    border-radius: 9px;
+    background: rgba(119, 152, 255, 0.08);
+    color: #c4d2ff;
+}
+
+.auth-footer {
+    margin: 18px 0 0;
+    text-align: center;
+}
+
+.auth-footer a,
+.auth-skip {
+    color: var(--auth-accent);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.auth-footer a:hover,
+.auth-skip:hover {
+    text-decoration: underline;
+}
+
+.welcome-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: rgba(56, 217, 196, 0.25);
+    animation: welcome-arrive 650ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+    text-align: center;
+}
+
+.welcome-card::before {
+    position: absolute;
+    inset: -55% -25% auto;
+    z-index: -1;
+    height: 100%;
+    background: radial-gradient(ellipse, rgba(56, 217, 196, 0.12), transparent 68%);
+    content: "";
+    pointer-events: none;
+}
+
+.welcome-mark {
+    position: relative;
+    display: grid;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 22px;
+    place-items: center;
+    border: 1px solid rgba(56, 217, 196, 0.4);
+    border-radius: 50%;
+    color: var(--auth-accent);
+    font-size: 27px;
+    background: rgba(56, 217, 196, 0.08);
+    box-shadow: 0 0 32px rgba(56, 217, 196, 0.13);
+    animation: welcome-pulse 900ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.welcome-mark::after {
+    position: absolute;
+    inset: -7px;
+    border: 1px solid rgba(56, 217, 196, 0.3);
+    border-right-color: transparent;
+    border-radius: 50%;
+    content: "";
+    animation: welcome-orbit 1.8s linear infinite;
+}
+
+.welcome-progress {
+    height: 4px;
+    margin: 24px 0 18px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: #26344b;
+}
+
+.welcome-progress span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    background: var(--auth-accent);
+    background: linear-gradient(90deg, #38d9c4, #83f1df, #38d9c4);
+    background-size: 200% 100%;
+    animation: welcome-progress 1550ms cubic-bezier(0.35, 0, 0.2, 1) both;
+}
+
+@keyframes welcome-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes welcome-pulse {
+    0% {
+        opacity: 0;
+        transform: scale(0.82);
+    }
+
+    55% {
+        opacity: 1;
+        transform: scale(1.06);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes welcome-progress {
+    70% {
+        transform: scaleX(1);
+    }
+
+    to {
+        transform: scaleX(1);
+        background-position: 100% 0;
+    }
+}
+
+@keyframes welcome-orbit {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 420px) {
+    body {
+        padding: 14px;
+    }
+
+    .auth-card {
+        padding: 24px 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .welcome-progress span {
+        transform: scaleX(1);
+        background-position: 100% 0;
+    }
+
+    .welcome-mark::after {
+        animation: none;
+    }
+}

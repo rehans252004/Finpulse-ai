@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d18">
+    <title>Sign Up · FinPulse AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+</head>
+<body>
+    <main class="auth-card">
+        <p class="auth-brand">FinPulse <span>AI</span></p>
+        <p class="auth-eyebrow">FINANCIAL INTELLIGENCE</p>
+        <h1>Create your account</h1>
+        <p class="auth-description">
+            Sign up with your email and backup phone. Without SMS setup, your
+            account is still created and the phone stays unverified.
+        </p>
+
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+        <p class="auth-message {{ 'auth-success' if category == 'success' else '' }}"
+           role="status">{{ message }}</p>
+        {% endfor %}
+
+        {% if error %}
+        <p class="auth-error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        <form class="auth-form" method="post" action="{{ url_for('signup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="full-name">Full name
+                <input id="full-name" name="full_name" type="text" maxlength="80"
+                       autocomplete="name"
+                       value="{{ request.form.get('full_name', '') }}" required>
+            </label>
+            <label for="email">Email address
+                <input id="email" name="email" type="email" maxlength="254"
+                       autocomplete="email" value="{{ request.form.get('email', '') }}"
+                       required>
+            </label>
+            <label for="phone">Backup phone number
+                <input id="phone" name="phone" type="tel" maxlength="20"
+                       autocomplete="tel" placeholder="+14155552671"
+                       pattern="\+[1-9][0-9]{7,14}"
+                       title="Use international format, such as +14155552671."
+                       value="{{ request.form.get('phone', '') }}"
+                       aria-describedby="phone-hint" required>
+            </label>
+            <p id="phone-hint" class="auth-description">
+                Use international format with country code. Phone sign-in becomes
+                available after the number is verified from your Profile.
+            </p>
+            <label for="password">Password
+                <input id="password" name="password" type="password"
+                       minlength="8" maxlength="128" autocomplete="new-password"
+                       aria-describedby="password-hint" required>
+            </label>
+            <p id="password-hint" class="auth-description">
+                Use 8–128 characters.
+            </p>
+            <label for="confirm-password">Confirm password
+                <input id="confirm-password" name="confirm_password"
+                       type="password" minlength="8" maxlength="128"
+                       autocomplete="new-password" required>
+            </label>
+            <button type="submit">Create account</button>
+        </form>
+
+        <p class="auth-footer">
+            Already have an account? <a href="{{ url_for('signin') }}">Sign in</a>
+        </p>
+    </main>
+</body>
+</html>

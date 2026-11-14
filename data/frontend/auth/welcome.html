@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d18">
+    <title>Welcome · FinPulse AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+</head>
+<body class="welcome-page">
+    <main class="auth-card welcome-card">
+        <div class="welcome-mark" aria-hidden="true">✓</div>
+        <p class="auth-brand">FinPulse <span>AI</span></p>
+        <p class="auth-eyebrow">FINANCIAL INTELLIGENCE</p>
+        <h1>Welcome{{ ', ' ~ email if email else '' }}!</h1>
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+        <p class="auth-message {{ 'auth-' ~ category if category in ['success', 'warning', 'info'] else '' }}"
+           role="status">{{ message }}</p>
+        {% endfor %}
+        <p class="auth-description" role="status" aria-live="polite">
+            Your dashboard is ready. Taking you there now…
+        </p>
+        <div class="welcome-progress" aria-hidden="true"><span></span></div>
+        <a class="auth-skip" href="{{ url_for('home') }}">Continue to dashboard</a>
+    </main>
+    <script>
+        const prefersReducedMotion = window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const delay = prefersReducedMotion
+            ? 50
+            : 1650;
+        window.setTimeout(() => window.location.replace('{{ url_for("home") }}'), delay);
+    </script>
+</body>
+</html>

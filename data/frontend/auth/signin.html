@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d18">
+    <title>Sign In · FinPulse AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+</head>
+<body>
+    <main class="auth-card">
+        <p class="auth-brand">FinPulse <span>AI</span></p>
+        <p class="auth-eyebrow">FINANCIAL INTELLIGENCE</p>
+        <h1>Welcome back</h1>
+        <p class="auth-description">Sign in to continue to your dashboard.</p>
+
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+        <p class="auth-message {{ 'auth-success' if category == 'success' else '' }}"
+           role="status">{{ message }}</p>
+        {% endfor %}
+
+        {% if error %}
+        <p class="auth-error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        <form class="auth-form" method="post" action="{{ url_for('signin') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="identifier">Email address or verified phone
+                <input id="identifier" name="identifier" type="text" maxlength="254"
+                       autocomplete="username"
+                       value="{{ request.form.get('identifier', '') }}"
+                       required>
+            </label>
+            <label for="password">Password
+                <input id="password" name="password" type="password"
+                       maxlength="128" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Sign in</button>
+        </form>
+
+        <p class="auth-footer">
+            New to FinPulse? <a href="{{ url_for('signup') }}">Create an account</a>
+        </p>
+    </main>
+</body>
+</html>

@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" href="data:,">
+
+    <title>FinPulse AI | Financial Intelligence</title>
+
+    <script>
+        (() => {
+            let theme = 'dark';
+            try {
+                const savedTheme = localStorage.getItem('finpulse-theme');
+                if (savedTheme === 'light' || savedTheme === 'dark') {
+                    theme = savedTheme;
+                }
+            } catch {
+                // Keep the dashboard usable when browser storage is unavailable.
+            }
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <h2 class="brand">FinPulse <span>AI</span></h2>
+        <p class="muted">FINANCIAL INTELLIGENCE</p>
+
+        <button class="profile-shortcut nav-button"
+                type="button" data-section="profile"
+                aria-label="Open profile">
+            <span class="profile-shortcut-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="8" r="3.5"></circle>
+                    <path d="M5 20c.7-3.2 3.2-5 7-5s6.3 1.8 7 5"></path>
+                </svg>
+            </span>
+            <span class="profile-shortcut-copy">
+                <strong>Profile</strong>
+                <small>{{ user.full_name or user.email }}</small>
+            </span>
+        </button>
+
+        <nav aria-label="Main navigation">
+            <button class="nav-button active"
+                    data-section="overview">Overview</button>
+
+            <button class="nav-button"
+                    data-section="market">Market Analytics</button>
+
+            <button class="nav-button"
+                    data-section="heatmap">Heatmap</button>
+
+            <button class="nav-button"
+                    data-section="correlation">Correlation</button>
+
+            <button class="nav-button"
+                    data-section="supplyDemand">Supply &amp; Demand</button>
+
+            <button class="nav-button"
+                    data-section="portfolio">Portfolio &amp; Alerts</button>
+
+            <button class="nav-button"
+                    data-section="careers">Career Intelligence</button>
+
+            <button class="nav-button"
+                    data-section="propMatch">Prop Firm Match</button>
+
+            <button class="nav-button"
+                    data-section="news">Market & Company News</button>
+
+        </nav>
+
+        <div class="report-download">
+            <button class="nav-button" id="reportButton"
+                    type="button" aria-expanded="false"
+                    aria-controls="reportMenu">
+                Download Reports
+            </button>
+
+            <div class="report-menu hidden" id="reportMenu">
+                <button class="report-menu-button"
+                        type="button" data-report-format="pdf">
+                    PDF document
+                </button>
+                <button class="report-menu-button"
+                        type="button" data-report-format="csv">
+                    CSV spreadsheet
+                </button>
+                <button class="report-menu-button"
+                        type="button" data-report-format="xlsx">
+                    Excel workbook (.xlsx)
+                </button>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <p><span class="status-dot"></span>Jarvis ready</p>
+            <p class="muted">{{ email }}</p>
+            <form method="post" action="{{ url_for('signout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="nav-button" type="submit">Sign out</button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1 id="pageTitle">Financial Intelligence Dashboard</h1>
+                <p class="muted">
+                    Market insights, company analytics, careers and financial news.
+                </p>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="theme-toggle"
+                        id="themeToggle"
+                        type="button"
+                        aria-label="Switch to light theme"
+                        aria-pressed="false">
+                    <span class="theme-toggle-icon" aria-hidden="true">☀</span>
+                    <span id="themeToggleLabel">Light theme</span>
+                </button>
+                <span class="demo-label">FINPULSE AI</span>
+            </div>
+        </header>
+
+        <div class="notice">
+            Market quotes may be delayed or unavailable depending on the
+            data provider. Job listings and news depend on external API
+            availability. Verify information with the original source.
+            Not investment advice.
+        </div>
+
+        <!-- OVERVIEW -->
+        <section id="overview" class="page-section">
+            <div class="card-grid">
+                <article class="card">
+                    <p class="muted">Companies tracked</p>
+                    <h2 id="companyCount">—</h2>
+                    <p class="muted">companies in the market list</p>
+                </article>
+
+                <article class="card">
+                    <p class="muted">Average change for live quotes</p>
+                    <h2 id="averageChange">—</h2>
+                    <p class="muted">Illustrative rows are excluded</p>
+                </article>
+
+                <article class="card">
+                    <p class="muted">Highest performer</p>
+                    <h2 id="bestPerformer">—</h2>
+                    <p id="bestPerformerDetail" class="muted"></p>
+                </article>
+
+                <article class="card">
+                    <p class="muted">Lowest performer</p>
+                    <h2 id="worstPerformer">—</h2>
+                    <p id="worstPerformerDetail" class="muted"></p>
+                </article>
+            </div>
+
+            <article class="panel">
+                <div class="section-heading">
+                    <div>
+                        <h3>Tracked Companies</h3>
+                        <p id="overviewCompanyCount" class="muted">
+                            Companies and daily market changes.
+                        </p>
+                    </div>
+                    <label class="overview-company-search">
+                        <span class="muted">Search companies</span>
+                        <input id="overviewCompanySearch"
+                               type="search"
+                               placeholder="Company, symbol, or sector"
+                               aria-label="Search tracked companies">
+                    </label>
+                </div>
+                <p class="muted" id="marketDataNotice" aria-live="polite">
+                    Loading live quote status...
+                </p>
+                <div class="table-wrap overview-company-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Symbol</th>
+                                <th>Sector</th>
+                                <th>Price</th>
+                                <th>Daily change</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overviewCompanyTable"></tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3>Market Movers</h3>
+                <p class="muted" id="marketMoversNotice">
+                    Loading market movers...
+                </p>
+                <p class="muted">
+                    Open any symbol on TradingView
+                    for its full interactive chart.
+                </p>
+                <canvas id="marketChart"></canvas>
+                <div id="marketMoverLinks" class="market-mover-links"></div>
+            </article>
+
+            <article class="panel tradingview-panel">
+                <div class="section-heading tradingview-heading">
+                    <div>
+                        <h3>TradingView Market Chart</h3>
+                        <p class="muted">Interactive TradingView chart for a top mover.</p>
+                    </div>
+                    <div class="tradingview-control">
+                        <label for="overviewTradingViewSymbol">Market mover</label>
+                        <select id="overviewTradingViewSymbol"
+                                aria-label="Choose a market mover chart"></select>
+                    </div>
+                </div>
+                <p class="muted">
+                    Trading Panel features require the full TradingView site;
+                    they are not available in embedded charts.
+                </p>
+                <div id="overview-tradingview-chart"
+                     class="tradingview-chart overview-tradingview-chart"></div>
+                <a id="overviewTradingViewFullLink"
+                   class="tradingview-action-link"
+                   href="https://www.tradingview.com/chart/"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    Open full TradingView · Paper Trading / broker panel ↗
+                </a>
+            </article>
+
+            <article class="panel">
+                <div class="section-heading">
+                    <h3>Latest Market News</h3>
+                    <button type="button" id="overviewNewsButton">
+                        Refresh both feeds
+                    </button>
+                </div>
+                <p class="muted">
+                    Market-wide headlines and company-specific news are shown
+                    separately. Headlines depend on Finnhub API access.
+                </p>
+                <div class="overview-news-columns">
+                    <section class="overview-news-feed"
+                             aria-labelledby="overviewMarketNewsTitle">
+                        <div class="section-heading">
+                            <h4 id="overviewMarketNewsTitle">Market news</h4>
+                            <button type="button"
+                                    class="text-action"
+                                    data-open-news="GENERAL">More market news</button>
+                        </div>
+                        <p id="overviewMarketNewsStatus" class="muted"
+                           role="status" aria-live="polite">Loading market headlines...</p>
+                        <div id="overviewMarketNewsResults" class="news-results"></div>
+                    </section>
+                    <section class="overview-news-feed"
+                             aria-labelledby="overviewCompanyNewsTitle">
+                        <div class="section-heading">
+                            <h4 id="overviewCompanyNewsTitle">Company news</h4>
+                            <select id="overviewCompanyNewsSymbol"
+                                    aria-label="Choose company for news"></select>
+                        </div>
+                        <p id="overviewCompanyNewsStatus" class="muted"
+                           role="status" aria-live="polite">Choose a company to load headlines.</p>
+                        <div id="overviewCompanyNewsResults" class="news-results"></div>
+                        <button type="button"
+                                class="text-action"
+                                data-open-company-news>More company news and sources</button>
+                    </section>
+                </div>
+            </article>
+        </section>
+
+        <!-- MARKET ANALYTICS -->
+        <section id="market" class="page-section hidden">
+            <article class="panel">
+                <div class="section-heading">
+                    <h3>Market Explorer</h3>
+
+                    <select id="sectorFilter" aria-label="Filter by sector">
+                        <option value="All">All sectors</option>
+                    </select>
+                </div>
+                <p class="muted" id="marketExplorerNotice" aria-live="polite">
+                    Loading live quote status...
+                </p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Company</th>
+                                <th>Sector</th>
+                                <th>Price</th>
+                                <th>Change</th>
+                                <th>Quote source</th>
+                                <th>Chart</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketTable"></tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3>Compare Companies</h3>
+                <p class="muted">
+                    Enter supported symbols separated by commas.
+                </p>
+
+                <form id="compareForm" class="search-row">
+                    <input id="compareInput"
+                           placeholder="AAPL, MSFT, NVDA"
+                           aria-label="Company symbols"
+                           required>
+                    <button id="compareButton" type="submit">
+                        Compare
+                    </button>
+                </form>
+
+                <div id="compareResults"></div>
+            </article>
+
+            <!-- TRADINGVIEW CHART -->
+            <article class="panel tradingview-panel">
+                <div class="section-heading tradingview-heading">
+                    <div>
+                        <h3>Live TradingView Chart</h3>
+                        <p class="muted">Interactive chart provided by TradingView.</p>
+                    </div>
+
+                    <div class="tradingview-controls">
+                        <div class="tradingview-control">
+                            <label for="tradingviewSymbolSelector">Symbol</label>
+                            <select id="tradingviewSymbolSelector"
+                                    aria-label="Choose chart symbol">
+                                <optgroup label="U.S. stocks" id="tradingviewStockOptions"></optgroup>
+                                <optgroup label="U.S. indices and ETFs">
+                                    <option value="SPX">S&amp;P 500</option>
+                                    <option value="NDX">Nasdaq 100</option>
+                                    <option value="DJI">Dow Jones</option>
+                                    <option value="SPY">SPY ETF</option>
+                                    <option value="QQQ">QQQ ETF</option>
+                                </optgroup>
+                                <optgroup label="Indian stocks">
+                                    <option value="RELIANCE">RELIANCE (NSE)</option>
+                                    <option value="TCS">TCS (NSE)</option>
+                                    <option value="INFY">INFY (NSE)</option>
+                                    <option value="HDFCBANK">HDFCBANK (NSE)</option>
+                                </optgroup>
+                                <optgroup label="Forex">
+                                    <option value="EURUSD">EUR/USD</option>
+                                    <option value="GBPUSD">GBP/USD</option>
+                                    <option value="USDJPY">USD/JPY</option>
+                                    <option value="USDINR">USD/INR</option>
+                                    <option value="AUDUSD">AUD/USD</option>
+                                    <option value="USDCAD">USD/CAD</option>
+                                    <option value="USDCHF">USD/CHF</option>
+                                    <option value="NZDUSD">NZD/USD</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="tradingview-control">
+                            <label for="tradingviewStyleSelector">Chart style</label>
+                            <select id="tradingviewStyleSelector"
+                                    aria-label="Choose chart style">
+                                <option value="1">Candlestick</option>
+                                <option value="3">Area</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tradingview-chart" class="tradingview-chart"></div>
+                <div class="tradingview-trading-note">
+                    <strong>Paper trading and broker connection</strong>
+                    <p class="muted">
+                        They are not available inside this embedded chart.
+                        Open the full TradingView chart, sign in, and use its
+                        Trading Panel to select Paper Trading or a supported broker.
+                    </p>
+                    <p class="muted tradingview-order-disclaimer">
+                        Buy and sell links only open the selected symbol on
+                        TradingView. They do not place or prefill an order.
+                        Review and submit any order on TradingView yourself.
+                    </p>
+                    <div class="tradingview-order-actions">
+                        <a id="tradingviewBuyMarket"
+                           class="tradingview-action-link tradingview-buy-link"
+                           href="https://www.tradingview.com/chart/"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            Buy Market · open TradingView ↗
+                        </a>
+                        <a id="tradingviewSellMarket"
+                           class="tradingview-action-link tradingview-sell-link"
+                           href="https://www.tradingview.com/chart/"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            Sell Market · open TradingView ↗
+                        </a>
+                    </div>
+                    <a id="tradingviewTradingLink"
+                       class="tradingview-action-link"
+                       href="https://www.tradingview.com/chart/"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Open full TradingView · Paper Trading / broker panel ↗
+                    </a>
+                </div>
+            </article>
+        </section>
+
+        <!-- HEATMAP -->
+        <section id="heatmap" class="page-section hidden">
+            <article class="panel">
+                <h3>Sector Heatmap</h3>
+                <p class="muted" id="heatmapNotice">
+                    Select a sector tile to filter the market explorer.
+                </p>
+                <p class="muted heatmap-model-note">
+                    Predictive trend score blends live one-day price momentum
+                    with revenue growth, earnings growth, and return on equity.
+                    Scores are directional indicators, not forecasts or investment advice.
+                </p>
+                <div id="heatmapGrid" class="heatmap-grid"></div>
+            </article>
+        </section>
+
+        <!-- CORRELATION -->
+        <section id="correlation" class="page-section hidden">
+            <article class="panel">
+                <h2>Correlation Explorer</h2>
+                <p class="muted">
+                    Compare how selected instruments move together over recent daily changes.
+                    This is an educational view of relative market motion, not a trade signal.
+                </p>
+                <div class="correlation-groups" aria-label="Correlation groups">
+                    <button type="button" class="correlation-group-button" data-correlation-group="all" aria-pressed="true">All sectors</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="technology" aria-pressed="false">Technology</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="banking" aria-pressed="false">Banking</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="healthcare" aria-pressed="false">Healthcare</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="energy" aria-pressed="false">Energy</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="consumer" aria-pressed="false">Consumer</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="industrials" aria-pressed="false">Industrials</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="utilities" aria-pressed="false">Utilities</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="telecom" aria-pressed="false">Telecom</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="real-estate" aria-pressed="false">Real Estate</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="materials" aria-pressed="false">Materials</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="semiconductors" aria-pressed="false">Semiconductors</button>
+                    <button type="button" class="correlation-group-button" data-correlation-group="forex" aria-pressed="false">Forex</button>
+                </div>
+                <div class="correlation-company-picker">
+                    <label for="correlationCompanies">Select instruments</label>
+                    <select id="correlationCompanies" multiple size="12" aria-label="Select instruments for correlation analysis"></select>
+                </div>
+                <div class="correlation-guide" aria-label="Correlation guide">
+                    <span><strong class="correlation-guide-positive">Positive</strong> · prices tend to rise and fall together.</span>
+                    <span><strong class="correlation-guide-neutral">Neutral</strong> · the relationship is weak or inconsistent.</span>
+                    <span><strong class="correlation-guide-negative">Negative</strong> · prices tend to move in opposite directions.</span>
+                </div>
+                <div class="correlation-picker-actions">
+                    <button id="correlationApply" type="button">Update matrix</button>
+                    <button id="correlationReset" type="button" class="secondary-button">Reset</button>
+                </div>
+                <p id="correlationNotice" class="muted" aria-live="polite">
+                    Loading correlation basket...
+                </p>
+                <div id="correlationPairs" class="correlation-pairs" aria-live="polite"></div>
+                <div class="correlation-grid" aria-live="polite">
+                    <h3 class="correlation-matrix-heading">Correlation matrix</h3>
+                    <div id="correlationMatrix"></div>
+                </div>
+                <p class="correlation-disclaimer">
+                    Correlation is a quick summary of how price moves relate to each other over recent periods.
+                    It does not forecast direction, validate a trade, or replace a full risk plan.
+                </p>
+            </article>
+        </section>
+
+        <!-- SUPPLY AND DEMAND -->
+        <section id="supplyDemand" class="page-section hidden">
+            <article class="panel">
+                <h2>Supply &amp; Demand Zones</h2>
+                <p class="muted">
+                    Demand zones mark areas where price previously found buying
+                    interest; supply zones mark areas where selling pressure
+                    appeared. These candidate zones are inferred from the
+                    selected timeframe, not a measure of actual order flow.
+                </p>
+                <div class="sd-concept-guide" aria-label="Supply and demand concepts">
+                    <div class="sd-concept demand">
+                        <strong>Demand · buying interest</strong>
+                        <span>A price area where buyers previously supported a move up.</span>
+                    </div>
+                    <div class="sd-concept supply">
+                        <strong>Supply · selling pressure</strong>
+                        <span>A price area where sellers previously pushed price down.</span>
+                    </div>
+                </div>
+                <p class="sd-disclaimer" role="note">
+                    Zones use Yahoo Finance candles and a simple swing-pivot method.
+                    Historical reactions may not repeat and this is not investment
+                    advice.
+                </p>
+                <div class="sd-controls">
+                    <label for="supplyDemandSymbol">Instrument</label>
+                    <select id="supplyDemandSymbol"
+                            aria-label="Choose a stock, forex pair, or commodity for supply and demand analysis"></select>
+                    <label for="supplyDemandTimeframe">Timeframe</label>
+                    <select id="supplyDemandTimeframe"
+                            aria-label="Choose the candle timeframe for supply and demand analysis">
+                        <option value="5m" selected>5 minutes</option>
+                        <option value="15m">15 minutes</option>
+                        <option value="1h">1 hour</option>
+                        <option value="1d">Daily</option>
+                    </select>
+                    <button id="analyzeSupplyDemand" type="button">
+                        Find zones
+                    </button>
+                </div>
+                <p class="sd-instrument-note">
+                    Forex levels use Yahoo Finance currency-pair candles. Gold
+                    uses COMEX gold futures (GC=F), not spot XAU/USD.
+                </p>
+                <p id="supplyDemandNotice" class="muted" aria-live="polite">
+                    Select an instrument to load recent 5-minute candles.
+                </p>
+                <div class="sd-price-summary">
+                    <span id="supplyDemandPriceLabel">Latest 5-minute close</span>
+                    <strong id="supplyDemandPrice">—</strong>
+                    <small id="supplyDemandAsOf"></small>
+                </div>
+                <section class="sd-live-chart" aria-labelledby="sdLiveChartHeading">
+                    <div class="sd-live-chart-heading">
+                        <div>
+                            <h3 id="sdLiveChartHeading">5-minute candle chart</h3>
+                            <p id="sdLiveChartDescription" class="muted">
+                                TradingView chart for the selected instrument · 5-minute timeframe.
+                                Zone calculations use recent Yahoo Finance 5-minute candles.
+                            </p>
+                        </div>
+                        <a id="supplyDemandTradingViewLink"
+                           href="https://www.tradingview.com/chart/"
+                           target="_blank"
+                           rel="noopener noreferrer">Open chart ↗</a>
+                    </div>
+                    <div id="supply-demand-tradingview-chart"
+                         class="tradingview-chart sd-tradingview-chart"
+                         role="region"
+                         aria-label="TradingView 5-minute candle chart"></div>
+                </section>
+                <div class="sd-zone-grid">
+                    <section class="sd-zone-column demand">
+                        <h3>Demand zones</h3>
+                        <div id="demandZones" aria-live="polite"></div>
+                    </section>
+                    <section class="sd-zone-column supply">
+                        <h3>Supply zones</h3>
+                        <div id="supplyZones" aria-live="polite"></div>
+                    </section>
+                </div>
+                <section id="sdOutlook" class="sd-outlook neutral"
+                         aria-labelledby="sdOutlookHeading">
+                    <div class="sd-outlook-heading">
+                        <div>
+                            <span class="sd-outlook-eyebrow">ZONE-BASED DIRECTIONAL BIAS</span>
+                            <h3 id="sdOutlookHeading">Directional outlook</h3>
+                        </div>
+                        <strong id="sdOutlookLabel" class="sd-outlook-label"
+                                aria-live="polite">Waiting for analysis</strong>
+                    </div>
+                    <p id="sdOutlookReason" class="muted" aria-live="polite">
+                        Analyze an instrument to see whether its latest price is testing
+                        a demand or supply zone.
+                    </p>
+                    <div class="sd-outlook-details">
+                        <p><strong>Confirmation to watch:</strong>
+                            <span id="sdOutlookConfirmation">—</span></p>
+                        <p><strong>Zone to watch:</strong>
+                            <span id="sdOutlookZone">—</span></p>
+                        <p id="sdOutlookInvalidationRow" hidden>
+                            <strong>What weakens this read:</strong>
+                            <span id="sdOutlookInvalidation"></span>
+                        </p>
+                    </div>
+                    <small>
+                        Educational zone-based bias only—not a price target,
+                        probability, guaranteed forecast, or investment advice.
+                    </small>
+                </section>
+                <section id="sdMultiTimeframe" class="sd-mtf-panel"
+                         aria-labelledby="sdMultiTimeframeHeading">
+                    <h3 id="sdMultiTimeframeHeading">Higher-timeframe confirmation</h3>
+                    <p id="sdMultiTimeframeSummary" class="muted" aria-live="polite">
+                        Checking whether 5-minute zones overlap 15-minute and hourly zones...
+                    </p>
+                </section>
+                <section class="sd-learning" aria-labelledby="sdLearningHeading">
+                    <h3 id="sdLearningHeading">How to understand these zones</h3>
+                    <p class="muted">
+                        A zone is a price band, not an exact line or an instruction
+                        to buy or sell. Read it alongside the chart and your own risk plan.
+                    </p>
+                    <figure class="sd-illustration">
+                        <svg viewBox="0 0 820 330"
+                             role="img"
+                             aria-labelledby="sdChartTitle sdChartDescription"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <title id="sdChartTitle">Example supply and demand zones</title>
+                            <desc id="sdChartDescription">
+                                An illustrative candlestick chart. A red supply band
+                                sits above the current price line, and a green demand
+                                band sits below it. The bands are areas, not exact
+                                prices or guaranteed reversals.
+                            </desc>
+                            <rect x="1" y="1" width="818" height="328" rx="12"
+                                  class="sd-chart-background"/>
+                            <g class="sd-chart-grid">
+                                <line x1="72" y1="70" x2="770" y2="70"/>
+                                <line x1="72" y1="120" x2="770" y2="120"/>
+                                <line x1="72" y1="170" x2="770" y2="170"/>
+                                <line x1="72" y1="220" x2="770" y2="220"/>
+                                <line x1="72" y1="270" x2="770" y2="270"/>
+                            </g>
+                            <rect x="72" y="62" width="698" height="54" rx="5"
+                                  class="sd-chart-supply"/>
+                            <text x="88" y="84" class="sd-chart-zone-label supply">
+                                SUPPLY ZONE
+                            </text>
+                            <text x="88" y="103" class="sd-chart-small">
+                                Past selling pressure · area, not a line
+                            </text>
+                            <rect x="72" y="220" width="698" height="54" rx="5"
+                                  class="sd-chart-demand"/>
+                            <text x="88" y="243" class="sd-chart-zone-label demand">
+                                DEMAND ZONE
+                            </text>
+                            <text x="88" y="262" class="sd-chart-small">
+                                Past buying interest · area, not a line
+                            </text>
+                            <g class="sd-chart-candles">
+                                <line x1="155" y1="180" x2="155" y2="236"/>
+                                <rect x="148" y="196" width="14" height="24" rx="2"/>
+                                <line x1="205" y1="156" x2="205" y2="214"/>
+                                <rect x="198" y="171" width="14" height="26" rx="2"/>
+                                <line x1="255" y1="132" x2="255" y2="190"/>
+                                <rect x="248" y="147" width="14" height="27" rx="2"/>
+                                <line x1="305" y1="120" x2="305" y2="164"/>
+                                <rect x="298" y="130" width="14" height="22" rx="2"/>
+                                <line x1="355" y1="126" x2="355" y2="179"/>
+                                <rect x="348" y="138" width="14" height="25" rx="2"/>
+                                <line x1="405" y1="151" x2="405" y2="207"/>
+                                <rect x="398" y="166" width="14" height="24" rx="2"/>
+                                <line x1="455" y1="173" x2="455" y2="226"/>
+                                <rect x="448" y="187" width="14" height="24" rx="2"/>
+                                <line x1="505" y1="155" x2="505" y2="214"/>
+                                <rect x="498" y="170" width="14" height="26" rx="2"/>
+                                <line x1="555" y1="132" x2="555" y2="187"/>
+                                <rect x="548" y="145" width="14" height="26" rx="2"/>
+                                <line x1="605" y1="121" x2="605" y2="169"/>
+                                <rect x="598" y="132" width="14" height="23" rx="2"/>
+                                <line x1="655" y1="137" x2="655" y2="190"/>
+                                <rect x="648" y="150" width="14" height="25" rx="2"/>
+                            </g>
+                            <line x1="72" y1="170" x2="770" y2="170"
+                                  class="sd-chart-current"/>
+                            <rect x="653" y="150" width="117" height="25" rx="5"
+                                  class="sd-chart-price-tag"/>
+                            <text x="663" y="167" class="sd-chart-price-label">
+                                CURRENT PRICE
+                            </text>
+                            <text x="72" y="307" class="sd-chart-axis">
+                                Illustrative only · price action can break through either zone
+                            </text>
+                        </svg>
+                        <figcaption>
+                            Example only—not a live chart or a prediction. In this
+                            sketch, current price is between the two historical bands.
+                        </figcaption>
+                    </figure>
+                    <div class="sd-learning-steps">
+                        <article class="sd-learning-card">
+                            <span class="sd-step-number">1</span>
+                            <div>
+                                <h4>Start with the latest close</h4>
+                                <p>
+                                    Compare the latest selected-timeframe close with each band.
+                                    A zone above price is overhead; a zone below price
+                                    is underneath; “inside” means the close is within
+                                    the band.
+                                </p>
+                            </div>
+                        </article>
+                        <article class="sd-learning-card">
+                            <span class="sd-step-number">2</span>
+                            <div>
+                                <h4>Read the full band</h4>
+                                <p>
+                                    The low and high are the zone boundaries. Price can
+                                    move through part of a band before reacting, so
+                                    don’t treat either boundary as a guaranteed turning point.
+                                </p>
+                            </div>
+                        </article>
+                        <article class="sd-learning-card">
+                            <span class="sd-step-number">3</span>
+                            <div>
+                                <h4>Look for confirmation</h4>
+                                <p>
+                                    On a chart, observe how price behaves at the area.
+                                    Some traders wait for a rejection or a candle close
+                                    back away from the band; a touch alone is not confirmation.
+                                </p>
+                            </div>
+                        </article>
+                        <article class="sd-learning-card">
+                            <span class="sd-step-number">4</span>
+                            <div>
+                                <h4>Plan risk before any trade</h4>
+                                <p>
+                                    Decide in advance what would invalidate your idea,
+                                    how much you could lose, and whether the potential
+                                    reward justifies that risk. No setup is certain.
+                                </p>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="sd-learning-details">
+                        <details>
+                            <summary>What do “overlaps” and “distance” mean?</summary>
+                            <p>
+                                “Later candles overlapped” counts candle ranges on the
+                                selected timeframe
+                                that intersected the band after it formed. It does not
+                                count confirmed bounces or prove that buyers or sellers
+                                are still waiting there. “Distance” is the percentage
+                                between the latest close and the zone midpoint.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>What makes a zone stronger or weaker?</summary>
+                            <p>
+                                This page does not assign a strength score. In general,
+                                traders may consider the move away from a zone, how
+                                recently it formed, repeated reactions, the broader
+                                trend, and whether price has closed through it. More
+                                revisits do not automatically mean a zone is stronger.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>What are common mistakes?</summary>
+                            <ul>
+                                <li>Assuming a zone must hold or placing an order just because price touched it.</li>
+                                <li>Confusing a historical price reaction with proof of current order flow.</li>
+                                <li>Ignoring news, gaps, spread, timeframe, or the possibility of a break-through.</li>
+                                <li>Risking money you cannot afford to lose or trading without an exit plan.</li>
+                            </ul>
+                        </details>
+                        <details>
+                            <summary>How are these zones calculated?</summary>
+                            <p>
+                                FinPulse looks for local highs and lows in selected-timeframe
+                                Finnhub candles, then uses part of the pivot candle’s
+                                range as a candidate band. A zone is omitted if a
+                                later candle close has crossed through it. This is a
+                                simple educational price-action method, not order-book
+                                or institutional-flow analysis.
+                            </p>
+                        </details>
+                    </div>
+                    <p class="sd-learning-note">
+                        Example: if a demand band is 95–98 and the latest close is
+                        102, the band is below price. That only describes location;
+                        it does not mean price will fall to 98 or bounce there.
+                    </p>
+                </section>
+            </article>
+        </section>
+
+        <section id="portfolio" class="page-section hidden">
+            <article class="panel personal-feature-hero alert-hero">
+                <div class="personal-feature-hero-copy">
+                    <span class="personal-feature-eyebrow">MARKET WATCH · LIVE CHECKS</span>
+                    <h2>Price-move alerts</h2>
+                    <p class="muted">
+                        Your levels, watched while FinPulse is open. See how
+                        close each alert is to its trigger.
+                    </p>
+                </div>
+                <p class="muted">
+                    Create a one-time alert for a price level or a percentage
+                    move from the latest available Yahoo Finance 5-minute
+                    price. Quotes may be delayed. Alerts are checked every
+                    minute while this dashboard is open.
+                </p>
+                <button id="enablePriceNotifications" type="button">
+                    Enable browser notifications
+                </button>
+                <form id="priceAlertForm" class="personal-feature-form">
+                    <label>Instrument
+                        <select id="priceAlertSymbol" required></select>
+                    </label>
+                    <label>Alert type
+                        <select id="priceAlertType">
+                            <option value="price">Price reaches</option>
+                            <option value="percent">% move from now</option>
+                        </select>
+                    </label>
+                    <label>Direction
+                        <select id="priceAlertDirection">
+                            <option value="above">At or above</option>
+                            <option value="below">At or below</option>
+                        </select>
+                    </label>
+                    <label id="priceAlertThresholdLabel"><span>Target price</span>
+                        <input id="priceAlertThreshold" type="number" min="0.0001"
+                               step="any" required>
+                    </label>
+                    <button type="submit">Add alert</button>
+                </form>
+                <div class="alert-preset-wrap">
+                    <span class="muted">Quick move alerts from latest price:</span>
+                    <div id="priceAlertPresets" class="alert-preset-buttons">
+                        <button type="button" data-alert-preset="above:1">+1%</button>
+                        <button type="button" data-alert-preset="above:2">+2%</button>
+                        <button type="button" data-alert-preset="above:5">+5%</button>
+                        <button type="button" data-alert-preset="below:1">−1%</button>
+                        <button type="button" data-alert-preset="below:2">−2%</button>
+                        <button type="button" data-alert-preset="below:5">−5%</button>
+                    </div>
+                </div>
+                <div class="personal-feature-list-heading">
+                    <h3>Your alerts</h3>
+                    <span id="priceAlertCount" class="feature-count">0 active</span>
+                </div>
+                <p id="priceAlertStatus" class="muted" role="status" aria-live="polite"></p>
+                <div id="priceAlertList" class="personal-feature-list"></div>
+            </article>
+            <article class="panel personal-feature-hero portfolio-hero">
+                <div class="personal-feature-hero-copy">
+                    <span class="personal-feature-eyebrow">YOUR MONEY · YOUR VIEW</span>
+                    <h2>Portfolio tracker</h2>
+                    <p class="muted">
+                        Track your holdings, cost basis, allocation, and
+                        unrealized performance in one clean view.
+                    </p>
+                </div>
+                <p class="muted">
+                    Record USD-quoted tracked stocks. Value, allocation, and
+                    profit/loss use the latest Yahoo Finance price, which may
+                    be delayed; if a quote is
+                    unavailable, totals are marked incomplete.
+                </p>
+                <form id="portfolioForm" class="personal-feature-form">
+                    <label>Stock
+                        <select id="portfolioSymbol" required></select>
+                    </label>
+                    <label>Shares to add
+                        <input id="portfolioQuantity" type="number" min="0.000001"
+                               step="any" required>
+                    </label>
+                    <label>Average cost per share (USD)
+                        <input id="portfolioAverageCost" type="number" min="0.0001"
+                               step="any" required>
+                    </label>
+                    <button type="submit">Add / update holding</button>
+                </form>
+                <div class="personal-feature-list-heading">
+                    <h3>Portfolio snapshot</h3>
+                    <button id="refreshPortfolio" class="text-action" type="button">
+                        Refresh prices
+                    </button>
+                </div>
+                <div class="portfolio-summary">
+                    <div class="portfolio-metric">
+                        <span>Market value</span>
+                        <strong id="portfolioValue">—</strong>
+                    </div>
+                    <div class="portfolio-metric">
+                        <span>Total return</span>
+                        <strong id="portfolioGainLoss">—</strong>
+                        <small id="portfolioReturn">—</small>
+                    </div>
+                    <div class="portfolio-metric">
+                        <span>Cost basis</span>
+                        <strong id="portfolioCost">—</strong>
+                    </div>
+                </div>
+                <p id="portfolioNotice" class="muted" role="status" aria-live="polite"></p>
+                <div class="portfolio-visuals">
+                    <div class="portfolio-chart-wrap">
+                        <h3>Allocation mix</h3>
+                        <div class="portfolio-chart-canvas">
+                            <canvas id="portfolioAllocationChart"
+                                    aria-label="Portfolio allocation by holding"
+                                    role="img"></canvas>
+                        </div>
+                        <div id="portfolioAllocationLegend" class="portfolio-allocation-legend"></div>
+                    </div>
+                    <aside id="portfolioInsights" class="portfolio-insights"
+                           aria-live="polite"></aside>
+                </div>
+                <section class="portfolio-scenario" aria-labelledby="portfolioScenarioTitle">
+                    <div class="portfolio-scenario-heading">
+                        <div>
+                            <span class="scenario-kicker">HYPOTHETICAL · NOT A FORECAST</span>
+                            <h3 id="portfolioScenarioTitle">Portfolio shock lab</h3>
+                            <p class="muted">
+                                Preview how a uniform market move could change today's
+                                holdings, based on their latest available prices.
+                            </p>
+                        </div>
+                        <label for="portfolioShock">
+                            Market move
+                            <output id="portfolioShockLabel" for="portfolioShock">−10%</output>
+                        </label>
+                    </div>
+                    <input id="portfolioShock" type="range" min="-30" max="30"
+                           step="1" value="-10" aria-label="Hypothetical portfolio market move">
+                    <p id="portfolioScenarioResult" class="scenario-result" aria-live="polite">
+                        Add holdings to preview a hypothetical portfolio move.
+                    </p>
+                    <div id="portfolioScenarioPositions" class="scenario-positions"></div>
+                </section>
+                <div id="portfolioPositions" class="personal-feature-list"></div>
+            </article>
+        </section>
+
+        <!-- CAREER INTELLIGENCE -->
+        <section id="careers" class="page-section hidden">
+            <article class="panel">
+                <h3>Career Intelligence</h3>
+                <p class="muted">
+                    Find current roles by title, location, and a company from
+                    the tracked market list. Live in-app listings use Adzuna;
+                    live company searches open job boards when no feed is connected.
+                </p>
+
+                <form id="careerSearchForm" class="search-row">
+                    <select id="careerCompany" aria-label="Company">
+                        <option value="">Any tracked company</option>
+                    </select>
+                    <input id="careerKeyword"
+                           type="text"
+                           value="financial analyst"
+                           placeholder="Finance analyst, data analyst, internship"
+                           aria-label="Job title or keyword"
+                           required>
+
+                    <input id="careerLocation"
+                           type="text"
+                           value="Bengaluru"
+                           placeholder="Bengaluru, Mumbai, Remote"
+                           aria-label="Job location"
+                           required>
+
+                    <button id="careerSearchButton" type="submit">
+                        Search Jobs
+                    </button>
+                </form>
+
+                <div class="search-row">
+                    <button type="button" class="career-quick-search"
+                            data-keyword="finance intern">
+                        Finance Internships
+                    </button>
+
+                    <button type="button" class="career-quick-search"
+                            data-keyword="financial analyst">
+                        Finance Analyst
+                    </button>
+
+                    <button type="button" class="career-quick-search"
+                            data-keyword="data analyst">
+                        Data Analyst
+                    </button>
+
+                    <button type="button" class="career-quick-search"
+                            data-keyword="business analyst">
+                        Business Analyst
+                    </button>
+                </div>
+
+                <h4>Live company job searches</h4>
+                <p class="muted">
+                    These links search current postings for the selected
+                    company, role, and location. Applications open on the job
+                    provider's website.
+                </p>
+                <div class="career-portals" aria-label="Official job portals">
+                    <a class="career-portal-link"
+                       data-career-portal="naukri"
+                       href="https://www.naukri.com/"
+                       target="_blank"
+                       rel="noopener noreferrer">Search Naukri ↗</a>
+                    <a class="career-portal-link"
+                       data-career-portal="workindia"
+                       href="https://www.workindia.in/"
+                       target="_blank"
+                       rel="noopener noreferrer">Search WorkIndia ↗</a>
+                    <a class="career-portal-link"
+                       data-career-portal="linkedin"
+                       href="https://www.linkedin.com/jobs/"
+                       target="_blank"
+                       rel="noopener noreferrer">Search LinkedIn ↗</a>
+                    <a class="career-portal-link"
+                       data-career-portal="google"
+                       href="https://www.google.com/search?q=jobs"
+                       target="_blank"
+                       rel="noopener noreferrer">Search Google Jobs ↗</a>
+                </div>
+
+                <p id="careerStatus" class="muted" role="status"
+                   aria-live="polite">
+                    Search for openings to get started.
+                </p>
+
+                <div id="careerResults" class="career-grid"></div>
+                <nav id="careerPagination" class="career-pagination hidden"
+                     aria-label="Job listing pages">
+                    <button id="careerPrevious" type="button">← Previous</button>
+                    <span id="careerPageLabel" class="muted"></span>
+                    <button id="careerNext" type="button">Next →</button>
+                </nav>
+            </article>
+        </section>
+
+        <section id="propMatch" class="page-section hidden">
+            <article class="panel">
+                <h3>Prop Firm Match</h3>
+                <p class="muted">
+                    Browse selected Forex / CFD and Futures prop-firm programs,
+                    account-size information, and direct official links. Use
+                    the checklist to compare rules with your preferences.
+                    This is not a recommendation to purchase an evaluation,
+                    and the directory is not every firm worldwide.
+                </p>
+
+                <form id="propMatchForm" class="prop-match-form">
+                    <fieldset>
+                        <legend>Which markets do you want to trade?</legend>
+                        <label class="prop-match-choice">
+                            <input type="checkbox" name="market" value="forex">
+                            Forex / CFDs
+                        </label>
+                        <label class="prop-match-choice">
+                            <input type="checkbox" name="market" value="futures">
+                            Futures
+                        </label>
+                    </fieldset>
+
+                    <label>
+                        Maximum evaluation fee budget (USD)
+                        <input id="propMatchBudget"
+                               name="budget"
+                               type="number"
+                               min="0"
+                               max="10000"
+                               step="1"
+                               placeholder="Optional">
+                    </label>
+
+                    <label>
+                        Trading style
+                        <select id="propMatchStyle" name="style">
+                            <option value="intraday">Intraday</option>
+                            <option value="swing">Swing / hold overnight</option>
+                            <option value="news">Trade around news events</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Target advertised account size
+                        <select id="propMatchSize" name="size">
+                            <option value="unsure">Not sure yet</option>
+                            <option value="small">Smaller starting size</option>
+                            <option value="medium">Mid-size account</option>
+                            <option value="large">Larger advertised size</option>
+                        </select>
+                    </label>
+
+                    <button type="submit">List matching firms and accounts</button>
+                </form>
+
+                <p id="propMatchStatus" class="muted" role="status"
+                   aria-live="polite">
+                    Choose Forex / CFDs, Futures, or both to list available programs.
+                </p>
+                <div id="propMatchResults" class="prop-match-results"></div>
+            </article>
+
+            <article class="panel">
+                <h3>Before you pay</h3>
+                <p class="muted">
+                    Evaluation accounts are paid challenges, and passing does
+                    not guarantee a payout. Check the firm's current rules,
+                    total checkout and reset fees, payout terms, prohibited
+                    strategies, and whether it accepts customers in your
+                    country. An advertised account balance is not cash in
+                    your account.
+                </p>
+            </article>
+        </section>
+
+        <!-- MARKET AND COMPANY NEWS -->
+        <section id="news" class="page-section hidden">
+            <article class="panel">
+                <h3>Market & Company News</h3>
+                <p class="muted">
+                    Headlines and summaries from Finnhub, subject to API access.
+                </p>
+
+                <div class="search-row">
+                    <select id="newsSymbol" aria-label="Select news category">
+                        <option value="GENERAL">General market news</option>
+                        <option value="FOREX">Forex &amp; major currencies</option>
+                        <option value="INDIA">Indian markets</option>
+                        <optgroup label="Indian companies">
+                            <option value="RELIANCE">Reliance Industries (NSE)</option>
+                            <option value="TCS">Tata Consultancy Services (NSE)</option>
+                            <option value="INFY">Infosys (NSE)</option>
+                            <option value="HDFCBANK">HDFC Bank (NSE)</option>
+                        </optgroup>
+                    </select>
+
+                    <button type="button" id="newsRefreshButton">
+                        Refresh News
+                    </button>
+                </div>
+
+                <h4 id="newsPortalHeading">Official and major news sources</h4>
+                <p class="muted" id="newsPortalDescription">
+                    Open trusted market sources. Company newsroom links search
+                    for official announcements; external sites may require sign-in.
+                </p>
+                <div id="newsPortalLinks" class="news-portals"
+                     aria-label="External financial news sources"></div>
+
+                <p id="newsStatus" class="muted" role="status"
+                   aria-live="polite">
+                    Select a category and refresh to load news.
+                </p>
+
+                <div id="newsResults" class="career-grid"></div>
+            </article>
+        </section>
+
+        <!-- ACCOUNT PROFILE -->
+        <section id="profile" class="page-section hidden">
+            <article class="panel">
+                <h2>Profile</h2>
+                <p class="muted">
+                    Manage your account details, verify your backup phone,
+                    and update your password.
+                </p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Backup phone:</strong>
+                    <span id="profilePhoneStatus">
+                        {% if user.phone_e164 and user.phone_verified %}
+                        Verified: {{ user.phone_e164 }}
+                        {% elif user.phone_e164 %}
+                        Unverified: {{ user.phone_e164 }}
+                        {% else %}
+                        Not added
+                        {% endif %}
+                    </span>
+                </p>
+            </article>
+
+            <article class="panel profile-panel">
+                <h3>Personal details</h3>
+                <form class="profile-form" data-profile-form
+                      data-url="{{ url_for('update_profile') }}"
+                      data-status="profileNameMessage">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="profileName">Full name
+                        <input id="profileName" name="full_name" type="text"
+                               maxlength="80" autocomplete="name"
+                               value="{{ user.full_name }}" required>
+                    </label>
+                    <button type="submit">Save name</button>
+                </form>
+                <p id="profileNameMessage" class="profile-message" role="status"
+                   aria-live="polite"></p>
+            </article>
+
+            <article class="panel profile-panel">
+                <h3>Backup phone</h3>
+                <form class="profile-form" data-profile-form
+                      data-url="{{ url_for('start_profile_phone_verification') }}"
+                      data-status="profilePhoneMessage"
+                      data-action="start-phone-verification">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="profilePhone">Phone number
+                        <input id="profilePhone" name="phone" type="tel"
+                               maxlength="20" autocomplete="tel"
+                               pattern="\+[1-9][0-9]{7,14}"
+                               placeholder="+14155552671" required>
+                    </label>
+                    <button type="submit">Send verification code</button>
+                </form>
+                <form id="profilePhoneVerifyForm" class="profile-form hidden"
+                      data-profile-form
+                      data-url="{{ url_for('verify_profile_phone') }}"
+                      data-status="profilePhoneMessage"
+                      data-action="verify-phone">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="profilePhoneCode">SMS verification code
+                        <input id="profilePhoneCode" name="code" type="text"
+                               inputmode="numeric" autocomplete="one-time-code"
+                               pattern="[0-9]{4,10}" maxlength="10" required>
+                    </label>
+                    <button type="submit">Verify and save phone</button>
+                </form>
+                <p id="profilePhoneMessage" class="profile-message" role="status"
+                   aria-live="polite"></p>
+            </article>
+
+            <article class="panel profile-panel">
+                <h3>Change password</h3>
+                <form class="profile-form" data-profile-form
+                      data-url="{{ url_for('change_profile_password') }}"
+                      data-status="profilePasswordMessage">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label for="currentPassword">Current password
+                        <input id="currentPassword" name="current_password"
+                               type="password" maxlength="128"
+                               autocomplete="current-password" required>
+                    </label>
+                    <label for="newPassword">New password
+                        <input id="newPassword" name="new_password" type="password"
+                               minlength="8" maxlength="128"
+                               autocomplete="new-password" required>
+                    </label>
+                    <label for="confirmNewPassword">Confirm new password
+                        <input id="confirmNewPassword" name="confirm_password"
+                               type="password" minlength="8" maxlength="128"
+                               autocomplete="new-password" required>
+                    </label>
+                    <button type="submit">Change password</button>
+                </form>
+                <p id="profilePasswordMessage" class="profile-message" role="status"
+                   aria-live="polite"></p>
+            </article>
+        </section>
+    </main>
+
+    <!-- JARVIS ASSISTANT -->
+    <button id="assistantToggle"
+            class="assistant-toggle"
+            type="button"
+            aria-label="Open Jarvis assistant"
+            aria-controls="assistantPanel"
+            aria-expanded="false">
+        ✦
+    </button>
+
+    <section id="assistantPanel"
+             class="assistant-panel hidden"
+             aria-label="Jarvis assistant">
+        <div class="assistant-header">
+            <div>
+                <h3>Jarvis</h3>
+                <p class="muted">Your FinPulse conversation</p>
+            </div>
+
+            <div class="assistant-header-actions">
+                <button id="newAssistantChat"
+                        class="assistant-new-chat"
+                        type="button"
+                        aria-label="Start a new conversation and clear chat context">
+                    New chat
+                </button>
+                <button id="closeAssistant"
+                        class="icon-button"
+                        type="button"
+                        aria-label="Close assistant">×</button>
+            </div>
+        </div>
+
+        <div id="assistantMessages"
+             class="assistant-messages"
+             aria-live="polite">
+            <div class="message bot">
+                Hello! I’m Jarvis. I can navigate FinPulse, filter markets,
+                compare companies, search careers and news, refresh data,
+                and download reports. Try “show banking sector” or
+                “find data analyst jobs in Mumbai.” I’ll remember this chat
+                while it’s open. Use New chat to clear its context.
+            </div>
+        </div>
+
+        <form id="assistantForm" class="assistant-form">
+            <input id="assistantInput"
+                   placeholder="Ask Jarvis to control FinPulse..."
+                   autocomplete="off"
+                   aria-label="Message Jarvis"
+                   required>
+
+            <button type="submit">Send</button>
+        </form>
+
+        <button id="voiceButton"
+                class="voice-button"
+                type="button"
+                aria-pressed="false">
+            🎙 Start voice command
+        </button>
+
+        <p id="voiceStatus" class="muted" role="status"></p>
+    </section>
+
+    <script src="{{ url_for('static', filename='tradingview.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
